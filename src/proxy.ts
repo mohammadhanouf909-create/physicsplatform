@@ -1,15 +1,14 @@
 import { createServerClient } from '@supabase/ssr'
-import { NextResponse, type NextRequest } from 'next/server' // سحبنا النوع من هنا أضمن
+import { NextResponse, type NextRequest } from 'next/server'
 import createMiddleware from 'next-intl/middleware'
 import { routing } from '@/i18n/routing'
 
 const intlMiddleware = createMiddleware(routing);
 
+// هنا الحل: تأكدنا إنها "Async Function" ومصدرة كـ "middleware"
 export async function middleware(request: NextRequest) {
-  // 1. استجابة مبدئية من ميدل وير اللغات
   let response = intlMiddleware(request);
 
-  // 2. ربط سوبابيز بالميدل وير
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -29,12 +28,11 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  // 3. تحديث الـ Session
   await supabase.auth.getUser()
 
   return response
 }
 
 export const config = {
-  matcher: ['/', '/(ar|en)/:path*', '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)']
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)']
 };

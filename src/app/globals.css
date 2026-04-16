@@ -1,35 +1,11 @@
 @import "tailwindcss";
 
 @theme {
-  /* تعريف الخطوط عشان Tailwind 4 يشوفها */
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui;
-  --font-arabic: var(--font-arabic), ui-sans-serif, system-ui;
-  
-  /* تعريف الألوان الأساسية للمنصة */
-  --color-brand-blue: #1d4ed8; /* Blue-700 */
-}
-
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #ffffff; /* خليناها أبيض برضه مؤقتاً عشان ميتعبش عينك في البداية */
-    --foreground: #171717;
-  }
+  --font-sans: var(--font-inter);
+  --font-arabic: var(--font-arabic);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  /* بيخلي التنقل بين الصفحات ناعم */
-  scroll-behavior: smooth;
-}
-
-/* تحسين شكل الروابط */
-a {
-  text-decoration: none;
-  color: inherit;
+  background-color: white;
+  color: black;
 }

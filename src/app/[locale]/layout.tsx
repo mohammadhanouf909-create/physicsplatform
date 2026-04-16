@@ -1,3 +1,4 @@
+import "../globals.css"; // السطر ده هو اللي هيرجع الألوان والشكل للموقع
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages } from 'next-intl/server';
 import { routing } from '@/i18n/routing';
@@ -30,17 +31,20 @@ export default async function LocaleLayout({
     <html lang={locale} dir={locale === 'ar' ? 'rtl' : 'ltr'}>
       <body className={locale === 'ar' ? 'font-arabic' : 'font-sans'}>
         <NextIntlClientProvider messages={messages}>
-          <div className="flex min-h-screen flex-col">
+          <div className="flex min-h-screen flex-col bg-white">
+            {/* القائمة العلوية */}
             <PublicNavbar />
             
+            {/* محتوى الصفحات */}
             <main className="flex-grow">
               {children}
             </main>
             
+            {/* الجزء السفلي */}
             <PublicFooter />
           </div>
         </NextIntlClientProvider>
       </body>
     </html>
   );
-} // القوس ده كان ناقص في رسالتك
+}

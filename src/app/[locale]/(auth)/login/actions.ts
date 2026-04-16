@@ -58,7 +58,7 @@ export async function loginAction(
   }
 }
 
-// 3. أكشن إنشاء حساب (التعديل المهم هنا)
+// 3. أكشن إنشاء حساب (تمت إضافة الـ email هنا)
 export async function signupAction(
   locale: string,
   _prev: AuthState,
@@ -83,11 +83,13 @@ export async function signupAction(
   if (signUpError) return { error: signUpError.message };
   if (!data.user) return { error: "Signup failed" };
 
+  // هنا ضفنا الـ email عشان الجدول يقبل البيانات
   const { error: profileError } = await supabase
     .from("profiles")
     .insert({ 
         id: data.user.id, 
         full_name: parsed.data.full_name, 
+        email: parsed.data.email,
         role: "student" 
     });
 

@@ -58,7 +58,7 @@ export async function loginAction(
   }
 }
 
-// 3. أكشن إنشاء حساب (تمت إضافة الـ email هنا)
+// 3. أكشن إنشاء حساب (تعديل ذكي لحل مشكلة التكرار)
 export async function signupAction(
   locale: string,
   _prev: AuthState,
@@ -83,15 +83,16 @@ export async function signupAction(
   if (signUpError) return { error: signUpError.message };
   if (!data.user) return { error: "Signup failed" };
 
-  // هنا ضفنا الـ email عشان الجدول يقبل البيانات
+  // التعديل هنا: استخدام .upsert بدلاً من .insert
+  // الـ upsert معناها: "لو موجود حدثه، ولو مش موجود ضيفه" - وبكدة مش هيطلع Error أبداً
   const { error: profileError } = await supabase
     .from("profiles")
-    .insert({ 
+    .upsert({ 
         id: data.user.id, 
         full_name: parsed.data.full_name, 
         email: parsed.data.email,
         role: "student" 
-    });
+    }, { onConflict: 'id' }); // حل مشكلة التكرار
 
   if (profileError) return { error: "Profile error: " + profileError.message };
 

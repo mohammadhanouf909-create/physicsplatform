@@ -28,23 +28,19 @@ export default async function LocaleLayout({
 
   return (
     <html lang={locale} dir={locale === 'ar' ? 'rtl' : 'ltr'}>
-      {/* استخدمنا الخطوط اللي عرفتها في tailwind.config */}
       <body className={locale === 'ar' ? 'font-arabic' : 'font-sans'}>
         <NextIntlClientProvider messages={messages}>
           <div className="flex min-h-screen flex-col">
-            {/* القائمة العلوية */}
             <PublicNavbar />
             
-            {/* محتوى الصفحات */}
             <main className="flex-grow">
               {children}
             </main>
             
-            {/* الجزء السفلي */}
             <PublicFooter />
           </div>
         </NextIntlClientProvider>
       </body>
     </html>
   );
-}
+} // القوس ده كان ناقص في رسالتك

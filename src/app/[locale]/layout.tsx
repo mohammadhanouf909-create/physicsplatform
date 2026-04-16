@@ -3,22 +3,23 @@ import {getMessages} from 'next-intl/server';
 import {routing} from '@/i18n/routing';
 import {notFound} from 'next/navigation';
 
+export function generateStaticParams() {
+  return routing.locales.map((locale) => ({locale}));
+}
+
 export default async function LocaleLayout({
   children,
   params
 }: {
   children: React.ReactNode;
-  params: {locale: string};
+  params: Promise<{locale: string}>; // تعديل بسيط هنا عشان التوافق مع النسخة الجديدة
 }) {
-  // بنعرف الموقع إحنا في أي لغة (ar ولا en)
   const { locale } = await params;
   
-  // لو اللغة مش عربي ولا إنجليزي، طلع صفحة "غير موجود"
   if (!routing.locales.includes(locale as any)) {
     notFound();
   }
 
-  // بنجيب الكلمات المترجمة من الفولدر اللي عملناه زمان (messages)
   const messages = await getMessages();
 
   return (

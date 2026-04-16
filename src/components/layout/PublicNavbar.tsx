@@ -9,15 +9,14 @@ export default function PublicNavbar() {
     <nav className="border-b bg-white">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4">
         <Link href="/" className="text-xl font-bold text-blue-700">
-          {/* علامة الـ || "" دي بتحمي الموقع لو الكلمة مش موجودة في الـ JSON */}
-          {tCommon("appName") || "Physics GPT"}
+          {tCommon("appName")}
         </Link>
         <div className="flex items-center gap-6">
           <Link href="/login" className="text-sm font-medium text-gray-600 hover:text-blue-600">
-            {t("loginLink") || "Login"}
+            {t("loginLink")}
           </Link>
           <Link href="/signup" className="rounded-md bg-blue-700 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800">
-            {t("signupButton") || "Sign Up"}
+            {t("signupButton")}
           </Link>
         </div>
       </div>

@@ -5,8 +5,8 @@ import { routing } from '@/i18n/routing'
 
 const intlMiddleware = createMiddleware(routing);
 
-// هنا الحل: تأكدنا إنها "Async Function" ومصدرة كـ "middleware"
-export async function middleware(request: NextRequest) {
+// غيرنا الاسم هنا لـ proxy عشان يتوافق مع رسالة الخطأ في Next.js 15
+export async function proxy(request: NextRequest) {
   let response = intlMiddleware(request);
 
   const supabase = createServerClient(

@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
+// 1. التعريفات الأساسية
 const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
@@ -20,6 +21,7 @@ export type AuthState = {
   success?: string;
 };
 
+// 2. أكشن تسجيل الدخول
 export async function loginAction(
   locale: string,
   _prev: AuthState,
@@ -31,22 +33,14 @@ export async function loginAction(
   };
 
   const parsed = loginSchema.safeParse(raw);
-  if (!parsed.success) {
-    return { error: "Invalid email or password format" };
-  }
+  if (!parsed.success) return { error: "Invalid email or password format" };
 
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword(parsed.data);
 
-  if (error) {
-    return { error: "Invalid email or password" };
-  }
+  if (error) return { error: "Invalid email or password" };
 
-  // Get user role and redirect accordingly
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
+  const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Login failed" };
 
   const { data: profile } = await supabase
@@ -64,6 +58,7 @@ export async function loginAction(
   }
 }
 
+// 3. أكشن إنشاء حساب (التعديل المهم هنا)
 export async function signupAction(
   locale: string,
   _prev: AuthState,
@@ -76,35 +71,39 @@ export async function signupAction(
   };
 
   const parsed = signupSchema.safeParse(raw);
-  if (!parsed.success) {
-    return { error: "Please check your details and try again" };
-  }
+  if (!parsed.success) return { error: "Check details and try again" };
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signUp({
+  
+  const { data, error: signUpError } = await supabase.auth.signUp({
     email: parsed.data.email,
     password: parsed.data.password,
-    options: {
-      data: { full_name: parsed.data.full_name, role: "student" },
-    },
   });
 
-  if (error) {
-    if (error.message.includes("already registered")) {
-      return { error: "An account with this email already exists" };
-    }
-    return { error: error.message };
-  }
+  if (signUpError) return { error: signUpError.message };
+  if (!data.user) return { error: "Signup failed" };
+
+  const { error: profileError } = await supabase
+    .from("profiles")
+    .insert({ 
+        id: data.user.id, 
+        full_name: parsed.data.full_name, 
+        role: "student" 
+    });
+
+  if (profileError) return { error: "Profile error: " + profileError.message };
 
   redirect(`/${locale}/dashboard`);
 }
 
+// 4. أكشن الخروج
 export async function logoutAction(locale: string): Promise<void> {
   const supabase = await createClient();
   await supabase.auth.signOut();
   redirect(`/${locale}/login`);
 }
 
+// 5. أكشن استعادة كلمة المرور
 export async function resetPasswordAction(
   _prev: AuthState,
   formData: FormData
@@ -118,5 +117,5 @@ export async function resetPasswordAction(
   });
 
   if (error) return { error: error.message };
-  return { success: "Check your email for the reset link" };
+  return { success: "Check your email" };
 }

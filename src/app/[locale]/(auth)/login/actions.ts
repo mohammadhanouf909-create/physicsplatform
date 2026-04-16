@@ -18,6 +18,7 @@ const signupSchema = z.object({
 
 export type AuthState = { error?: string; success?: string };
 
+// 1. أكشن تسجيل الدخول
 export async function loginAction(locale: string, _prev: AuthState, formData: FormData): Promise<AuthState> {
   const raw = { email: formData.get("email") as string, password: formData.get("password") as string };
   const parsed = loginSchema.safeParse(raw);
@@ -31,6 +32,7 @@ export async function loginAction(locale: string, _prev: AuthState, formData: Fo
   redirect(`/${locale}/dashboard`);
 }
 
+// 2. أكشن إنشاء حساب (النسخة النهائية والجذرية)
 export async function signupAction(locale: string, _prev: AuthState, formData: FormData): Promise<AuthState> {
   const raw = {
     email: formData.get("email") as string,
@@ -43,6 +45,7 @@ export async function signupAction(locale: string, _prev: AuthState, formData: F
 
   const supabase = await createClient();
   
+  // أ. إنشاء الحساب في Supabase Auth
   const { data, error: signUpError } = await supabase.auth.signUp({
     email: parsed.data.email,
     password: parsed.data.password,
@@ -51,6 +54,7 @@ export async function signupAction(locale: string, _prev: AuthState, formData: F
   if (signUpError) return { error: signUpError.message };
   if (!data.user) return { error: "Signup failed" };
 
+  // ب. إنشاء البروفايل أو تحديثه (الضمان ضد التكرار)
   const { error: profileError } = await supabase
     .from("profiles")
     .upsert({ 
@@ -62,10 +66,18 @@ export async function signupAction(locale: string, _prev: AuthState, formData: F
 
   if (profileError) return { error: "Profile error: " + profileError.message };
 
+  // ج. تثبيت الجلسة (الحل الجذري لمشكلة الـ Redirect)
+  await supabase.auth.signInWithPassword({
+    email: parsed.data.email,
+    password: parsed.data.password,
+  });
+
+  // د. تحديث المسارات والتحويل للوحة التحكم
   revalidatePath("/", "layout");
   redirect(`/${locale}/dashboard`);
 }
 
+// 3. أكشن الخروج
 export async function logoutAction(locale: string): Promise<void> {
   const supabase = await createClient();
   await supabase.auth.signOut();
@@ -73,6 +85,7 @@ export async function logoutAction(locale: string): Promise<void> {
   redirect(`/${locale}/login`);
 }
 
+// 4. أكشن استعادة كلمة المرور
 export async function resetPasswordAction(_prev: AuthState, formData: FormData): Promise<AuthState> {
   const email = formData.get("email") as string;
   if (!email) return { error: "Email is required" };

@@ -1,6 +1,23 @@
 {
-    "Index": {
-      "title": "مرحباً بك في منصة الفيزياء",
-      "description": "المكان الأفضل لتعلم الفيزياء"
-    }
+  "common": {
+    "appName": "منصة الفيزياء"
+  },
+  "auth": {
+    "loginTitle": "تسجيل الدخول",
+    "loginSubtitle": "مرحباً بك مجدداً في منصتنا",
+    "emailLabel": "البريد الإلكتروني",
+    "passwordLabel": "كلمة المرور",
+    "forgotPassword": "نسيت كلمة المرور؟",
+    "loginButton": "دخول",
+    "noAccount": "ليس لديك حساب؟",
+    "signupLink": "إنشاء حساب جديد",
+    "signupTitle": "إنشاء حساب",
+    "signupSubtitle": "انضم إلينا وابدأ التعلم الآن",
+    "nameLabel": "الاسم بالكامل",
+    "passwordMinLength": "يجب ألا تقل عن 8 أحرف",
+    "signupButton": "تسجيل",
+    "hasAccount": "لديك حساب بالفعل؟",
+    "loginLink": "سجل دخولك",
+    "resetPassword": "استعادة كلمة المرور"
   }
+}

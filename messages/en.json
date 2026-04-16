@@ -1,6 +1,23 @@
 {
-    "Index": {
-      "title": "Welcome to Physics Platform",
-      "description": "The best place to learn physics"
-    }
+  "common": {
+    "appName": "Physics Platform"
+  },
+  "auth": {
+    "loginTitle": "Login",
+    "loginSubtitle": "Welcome back to our platform",
+    "emailLabel": "Email Address",
+    "passwordLabel": "Password",
+    "forgotPassword": "Forgot password?",
+    "loginButton": "Sign In",
+    "noAccount": "Don't have an account?",
+    "signupLink": "Create new account",
+    "signupTitle": "Sign Up",
+    "signupSubtitle": "Join us and start learning now",
+    "nameLabel": "Full Name",
+    "passwordMinLength": "Must be at least 8 characters",
+    "signupButton": "Register",
+    "hasAccount": "Already have an account?",
+    "loginLink": "Log in here",
+    "resetPassword": "Reset Password"
   }
+}

@@ -4,7 +4,9 @@
     "description": "طريقك للتفوق في الفيزياء مع مستر محمد عبد المهيمن"
   },
   "common": {
-    "appName": "منصة الفيزياء"
+    "appName": "منصة الفيزياء",
+    "noResults": "لا توجد نتائج حالياً",
+    "viewAll": "عرض الكل"
   },
   "auth": {
     "loginTitle": "تسجيل الدخول",
@@ -23,5 +25,11 @@
     "hasAccount": "لديك حساب بالفعل؟",
     "loginLink": "سجل دخولك",
     "resetPassword": "استعادة كلمة المرور"
+  },
+  "dashboard": {
+    "title": "لوحة التحكم",
+    "myExams": "امتحاناتي",
+    "completed": "المكتملة",
+    "myCourses": "كورساتي"
   }
 }

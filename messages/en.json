@@ -1,27 +1,35 @@
 {
   "Index": {
     "title": "Physics Educational Platform",
-    "description": "Your path to excellence in Physics with Mr. Mohamed Abdelmohemen"
+    "description": "Your path to excellence in Physics with Mr. Mohammed Abdelmohaimen"
   },
   "common": {
-    "appName": "Physics Platform"
+    "appName": "Physics Platform",
+    "noResults": "No results found",
+    "viewAll": "View All"
   },
   "auth": {
-    "loginTitle": "Login",
+    "loginTitle": "Log In",
     "loginSubtitle": "Welcome back to our platform",
     "emailLabel": "Email Address",
     "passwordLabel": "Password",
-    "forgotPassword": "Forgot password?",
-    "loginButton": "Sign In",
+    "forgotPassword": "Forgot your password?",
+    "loginButton": "Log In",
     "noAccount": "Don't have an account?",
-    "signupLink": "Create new account",
+    "signupLink": "Create a new account",
     "signupTitle": "Sign Up",
     "signupSubtitle": "Join us and start learning now",
     "nameLabel": "Full Name",
     "passwordMinLength": "Must be at least 8 characters",
-    "signupButton": "Register",
+    "signupButton": "Sign Up",
     "hasAccount": "Already have an account?",
-    "loginLink": "Log in here",
+    "loginLink": "Log in",
     "resetPassword": "Reset Password"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "myExams": "My Exams",
+    "completed": "Completed",
+    "myCourses": "My Courses"
   }
 }

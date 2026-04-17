@@ -3,11 +3,13 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { routing } from './i18n/routing';
 import { createServerClient } from '@supabase/ssr';
 
+// إعداد ميدل وير الترجمة
 const intlMiddleware = createMiddleware(routing);
 
 export default async function middleware(request: NextRequest) {
   let response = intlMiddleware(request);
 
+  // إعداد Supabase لتحديث الجلسة
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -34,5 +36,6 @@ export default async function middleware(request: NextRequest) {
 }
 
 export const config = {
+  // المسارات اللي الميدل وير هيشتغل عليها
   matcher: ['/', '/(ar|en)/:path*', '/((?!_next|_vercel|.*\\..*).*)'],
-}
+};

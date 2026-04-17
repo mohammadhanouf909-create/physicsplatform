@@ -1,18 +1,19 @@
 "use server";
 
-import { createClient, createAdminClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// ─── 1. Helpers & Auth ────────────────────────────────────────────────────────
 
 async function requireAdmin() {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) throw new Error("Unauthorized");
+  
+  if (!user) throw new Error("Unauthorized: Please log in again");
 
   const { data: profile } = await supabase
     .from("profiles")
@@ -21,15 +22,15 @@ async function requireAdmin() {
     .single();
 
   if (!["admin", "instructor", "assistant"].includes(profile?.role ?? "")) {
-    throw new Error("Forbidden");
+    throw new Error("Forbidden: You don't have admin privileges");
   }
   return { supabase, user, role: profile!.role };
 }
 
-// ─── Course ───────────────────────────────────────────────────────────────────
+// ─── 2. Schemas ───────────────────────────────────────────────────────────────
 
 const courseSchema = z.object({
-  title: z.string().min(2),
+  title: z.string().min(2, "العنوان قصير جداً"),
   title_ar: z.string().optional(),
   description: z.string().optional(),
   description_ar: z.string().optional(),
@@ -40,13 +41,17 @@ const courseSchema = z.object({
   instructor_id: z.string().uuid().optional(),
 });
 
-export type CourseFormState = { error?: string; success?: string };
+export type ActionState = { error?: string; success?: string };
+
+// ─── 3. Course Management Actions ─────────────────────────────────────────────
 
 export async function createCourseAction(
   locale: string,
-  _prev: CourseFormState,
+  _prev: ActionState,
   formData: FormData
-): Promise<CourseFormState> {
+): Promise<ActionState> {
+  let newCourseId = null;
+
   try {
     const { supabase, user } = await requireAdmin();
 
@@ -64,7 +69,7 @@ export async function createCourseAction(
 
     const parsed = courseSchema.safeParse(raw);
     if (!parsed.success) {
-      return { error: "Please fill in all required fields correctly" };
+      return { error: "الرجاء التأكد من صحة البيانات المدخلة." };
     }
 
     const payload = {
@@ -79,9 +84,10 @@ export async function createCourseAction(
       .select()
       .single();
 
-    if (error) return { error: error.message };
+    if (error) return { error: `خطأ في قاعدة البيانات: ${error.message}` };
+    if (!course) return { error: "لم يتم إنشاء الكورس." };
 
-    // Handle thumbnail upload if provided
+    // رفع صورة الغلاف (Thumbnail)
     const thumbnail = formData.get("thumbnail") as File | null;
     if (thumbnail && thumbnail.size > 0) {
       const ext = thumbnail.name.split(".").pop();
@@ -91,30 +97,31 @@ export async function createCourseAction(
         .upload(path, thumbnail, { upsert: true });
 
       if (!uploadError) {
-        const {
-          data: { publicUrl },
-        } = supabase.storage.from("thumbnails").getPublicUrl(path);
-        await supabase
-          .from("courses")
-          .update({ thumbnail_url: publicUrl })
-          .eq("id", course.id);
+        const { data: { publicUrl } } = supabase.storage.from("thumbnails").getPublicUrl(path);
+        await supabase.from("courses").update({ thumbnail_url: publicUrl }).eq("id", course.id);
       }
     }
 
-    revalidatePath(`/${locale}/admin/courses`);
-    redirect(`/${locale}/admin/courses/${course.id}`);
+    newCourseId = course.id;
   } catch (err: any) {
-    if (err?.digest?.startsWith("NEXT_REDIRECT")) throw err;
-    return { error: err.message || "Failed to create course" };
+    return { error: `خطأ في النظام: ${err.message}` };
   }
+
+  // التوجيه الناجح (يجب أن يكون خارج الـ try/catch)
+  if (newCourseId) {
+    revalidatePath(`/${locale}/admin/courses`);
+    redirect(`/${locale}/admin/courses/${newCourseId}`);
+  }
+
+  return { error: "فشل الإرسال غير معروف" };
 }
 
 export async function updateCourseAction(
   locale: string,
   courseId: string,
-  _prev: CourseFormState,
+  _prev: ActionState,
   formData: FormData
-): Promise<CourseFormState> {
+): Promise<ActionState> {
   try {
     const { supabase } = await requireAdmin();
 
@@ -131,23 +138,17 @@ export async function updateCourseAction(
     };
 
     const parsed = courseSchema.safeParse(raw);
-    if (!parsed.success) {
-      return { error: "Please fill in all required fields correctly" };
-    }
+    if (!parsed.success) return { error: "الرجاء إكمال الحقول المطلوبة بشكل صحيح." };
 
     const payload = {
       ...parsed.data,
       price: parsed.data.is_free ? 0 : parsed.data.price,
     };
 
-    const { error } = await supabase
-      .from("courses")
-      .update(payload)
-      .eq("id", courseId);
-
+    const { error } = await supabase.from("courses").update(payload).eq("id", courseId);
     if (error) return { error: error.message };
 
-    // Handle thumbnail upload
+    // تحديث صورة الغلاف
     const thumbnail = formData.get("thumbnail") as File | null;
     if (thumbnail && thumbnail.size > 0) {
       const ext = thumbnail.name.split(".").pop();
@@ -157,302 +158,107 @@ export async function updateCourseAction(
         .upload(path, thumbnail, { upsert: true });
 
       if (!uploadError) {
-        const {
-          data: { publicUrl },
-        } = supabase.storage.from("thumbnails").getPublicUrl(path);
-        await supabase
-          .from("courses")
-          .update({ thumbnail_url: publicUrl })
-          .eq("id", courseId);
+        const { data: { publicUrl } } = supabase.storage.from("thumbnails").getPublicUrl(path);
+        await supabase.from("courses").update({ thumbnail_url: publicUrl }).eq("id", courseId);
       }
     }
 
     revalidatePath(`/${locale}/admin/courses`);
     revalidatePath(`/${locale}/admin/courses/${courseId}`);
-    return { success: "Course updated successfully" };
+    return { success: "تم تحديث الكورس بنجاح!" };
   } catch (err: any) {
-    return { error: err.message || "Failed to update course" };
+    return { error: err.message || "فشل التحديث" };
   }
 }
 
-export async function deleteCourseAction(courseId: string, locale: string) {
+export async function deleteCourseAction(
+  courseId: string, 
+  locale: string
+): Promise<ActionState | void> {
+  let isDeleted = false;
   try {
     const { supabase } = await requireAdmin();
-    const { error } = await supabase
-      .from("courses")
-      .delete()
-      .eq("id", courseId);
-    if (error) throw error;
+    
+    // سيقوم Supabase بحذف الأقسام والدروس المرتبطة تلقائياً إذا كان مفعل Cascade Delete
+    const { error } = await supabase.from("courses").delete().eq("id", courseId);
+    if (error) return { error: error.message };
+    
+    isDeleted = true;
+  } catch (err: any) {
+    return { error: err.message };
+  }
+
+  if (isDeleted) {
     revalidatePath(`/${locale}/admin/courses`);
     redirect(`/${locale}/admin/courses`);
-  } catch (err: any) {
-    if (err?.digest?.startsWith("NEXT_REDIRECT")) throw err;
-    return { error: err.message };
   }
 }
 
-export async function toggleCourseStatusAction(
-  courseId: string,
-  currentStatus: string,
-  locale: string
-) {
-  try {
-    const { supabase } = await requireAdmin();
-    const newStatus = currentStatus === "published" ? "draft" : "published";
-    const { error } = await supabase
-      .from("courses")
-      .update({ status: newStatus })
-      .eq("id", courseId);
-    if (error) throw error;
-    revalidatePath(`/${locale}/admin/courses`);
-    revalidatePath(`/${locale}/admin/courses/${courseId}`);
-  } catch (err: any) {
-    return { error: err.message };
-  }
-}
+// ─── 4. Curriculum Actions (Sections & Lectures) ──────────────────────────────
 
-// ─── Sections ────────────────────────────────────────────────────────────────
-
-export async function createSectionAction(
-  courseId: string,
-  locale: string,
-  formData: FormData
-) {
+export async function createSectionAction(courseId: string, formData: FormData) {
   try {
     const { supabase } = await requireAdmin();
     const title = formData.get("title") as string;
-    const title_ar = formData.get("title_ar") as string | null;
-
-    if (!title) return { error: "Title is required" };
-
-    // Get max sort_order
-    const { data: existing } = await supabase
-      .from("sections")
-      .select("sort_order")
-      .eq("course_id", courseId)
-      .order("sort_order", { ascending: false })
-      .limit(1);
-
-    const sort_order = ((existing?.[0]?.sort_order ?? -1) + 1);
+    const title_ar = formData.get("title_ar") as string;
 
     const { error } = await supabase.from("sections").insert({
       course_id: courseId,
       title,
-      title_ar: title_ar || null,
-      sort_order,
+      title_ar,
+      order_index: 0 // يمكن تطويرها لاحقاً لترتيب الأقسام
     });
 
-    if (error) return { error: error.message };
-    revalidatePath(`/${locale}/admin/courses/${courseId}`);
+    if (error) throw new Error(error.message);
+    revalidatePath(`/[locale]/admin/courses/[courseId]`, "page");
     return { success: true };
-  } catch (err: any) {
-    return { error: err.message };
+  } catch (error: any) {
+    return { error: error.message };
   }
 }
 
-export async function updateSectionAction(
-  sectionId: string,
-  courseId: string,
-  locale: string,
-  formData: FormData
-) {
+export async function deleteSectionAction(sectionId: string) {
+  try {
+    const { supabase } = await requireAdmin();
+    const { error } = await supabase.from("sections").delete().eq("id", sectionId);
+    if (error) throw new Error(error.message);
+    revalidatePath(`/[locale]/admin/courses/[courseId]`, "page");
+    return { success: true };
+  } catch (error: any) {
+    return { error: error.message };
+  }
+}
+
+export async function createLectureAction(sectionId: string, formData: FormData) {
   try {
     const { supabase } = await requireAdmin();
     const title = formData.get("title") as string;
-    const title_ar = formData.get("title_ar") as string | null;
-
-    const { error } = await supabase
-      .from("sections")
-      .update({ title, title_ar: title_ar || null })
-      .eq("id", sectionId);
-
-    if (error) return { error: error.message };
-    revalidatePath(`/${locale}/admin/courses/${courseId}`);
-    return { success: true };
-  } catch (err: any) {
-    return { error: err.message };
-  }
-}
-
-export async function deleteSectionAction(
-  sectionId: string,
-  courseId: string,
-  locale: string
-) {
-  try {
-    const { supabase } = await requireAdmin();
-    const { error } = await supabase
-      .from("sections")
-      .delete()
-      .eq("id", sectionId);
-    if (error) return { error: error.message };
-    revalidatePath(`/${locale}/admin/courses/${courseId}`);
-    return { success: true };
-  } catch (err: any) {
-    return { error: err.message };
-  }
-}
-
-// ─── Lectures ────────────────────────────────────────────────────────────────
-
-export async function createLectureAction(
-  sectionId: string,
-  courseId: string,
-  locale: string,
-  formData: FormData
-) {
-  try {
-    const { supabase } = await requireAdmin();
-
-    const { data: existing } = await supabase
-      .from("lectures")
-      .select("sort_order")
-      .eq("section_id", sectionId)
-      .order("sort_order", { ascending: false })
-      .limit(1);
-
-    const sort_order = ((existing?.[0]?.sort_order ?? -1) + 1);
+    const title_ar = formData.get("title_ar") as string;
+    const is_free_preview = formData.get("is_free_preview") === "true";
 
     const { error } = await supabase.from("lectures").insert({
       section_id: sectionId,
-      course_id: courseId,
-      title: formData.get("title") as string,
-      title_ar: (formData.get("title_ar") as string) || null,
-      description: (formData.get("description") as string) || null,
-      is_preview: formData.get("is_preview") === "true",
-      sort_order,
-    });
-
-    if (error) return { error: error.message };
-    revalidatePath(`/${locale}/admin/courses/${courseId}`);
-    return { success: true };
-  } catch (err: any) {
-    return { error: err.message };
-  }
-}
-
-export async function updateLectureAction(
-  lectureId: string,
-  courseId: string,
-  locale: string,
-  formData: FormData
-) {
-  try {
-    const { supabase } = await requireAdmin();
-
-    const { error } = await supabase
-      .from("lectures")
-      .update({
-        title: formData.get("title") as string,
-        title_ar: (formData.get("title_ar") as string) || null,
-        description: (formData.get("description") as string) || null,
-        is_preview: formData.get("is_preview") === "true",
-      })
-      .eq("id", lectureId);
-
-    if (error) return { error: error.message };
-    revalidatePath(`/${locale}/admin/courses/${courseId}`);
-    return { success: true };
-  } catch (err: any) {
-    return { error: err.message };
-  }
-}
-
-export async function deleteLectureAction(
-  lectureId: string,
-  courseId: string,
-  locale: string
-) {
-  try {
-    const { supabase } = await requireAdmin();
-    const { error } = await supabase
-      .from("lectures")
-      .delete()
-      .eq("id", lectureId);
-    if (error) return { error: error.message };
-    revalidatePath(`/${locale}/admin/courses/${courseId}`);
-    return { success: true };
-  } catch (err: any) {
-    return { error: err.message };
-  }
-}
-
-// ─── Materials ───────────────────────────────────────────────────────────────
-
-export async function uploadMaterialAction(
-  lectureId: string,
-  courseId: string,
-  locale: string,
-  formData: FormData
-) {
-  try {
-    const { supabase } = await requireAdmin();
-    const file = formData.get("file") as File;
-    const title = formData.get("title") as string;
-    const title_ar = (formData.get("title_ar") as string) || null;
-
-    if (!file || file.size === 0) return { error: "No file selected" };
-    if (file.size > 50 * 1024 * 1024) return { error: "File must be under 50MB" };
-
-    const ext = file.name.split(".").pop();
-    const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-    const path = `${courseId}/${lectureId}/${fileName}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from("materials")
-      .upload(path, file);
-
-    if (uploadError) return { error: uploadError.message };
-
-    const { data: existing } = await supabase
-      .from("materials")
-      .select("sort_order")
-      .eq("lecture_id", lectureId)
-      .order("sort_order", { ascending: false })
-      .limit(1);
-
-    const sort_order = ((existing?.[0]?.sort_order ?? -1) + 1);
-
-    const { error: dbError } = await supabase.from("materials").insert({
-      lecture_id: lectureId,
-      course_id: courseId,
-      title: title || file.name,
+      title,
       title_ar,
-      file_url: path,
-      file_name: file.name,
-      file_size: file.size,
-      file_type: file.type,
-      sort_order,
+      is_free_preview,
     });
 
-    if (dbError) return { error: dbError.message };
-
-    revalidatePath(`/${locale}/admin/courses/${courseId}`);
+    if (error) throw new Error(error.message);
+    revalidatePath(`/[locale]/admin/courses/[courseId]`, "page");
     return { success: true };
-  } catch (err: any) {
-    return { error: err.message };
+  } catch (error: any) {
+    return { error: error.message };
   }
 }
 
-export async function deleteMaterialAction(
-  materialId: string,
-  filePath: string,
-  courseId: string,
-  locale: string
-) {
+export async function deleteLectureAction(lectureId: string) {
   try {
     const { supabase } = await requireAdmin();
-
-    await supabase.storage.from("materials").remove([filePath]);
-    const { error } = await supabase
-      .from("materials")
-      .delete()
-      .eq("id", materialId);
-
-    if (error) return { error: error.message };
-    revalidatePath(`/${locale}/admin/courses/${courseId}`);
+    const { error } = await supabase.from("lectures").delete().eq("id", lectureId);
+    if (error) throw new Error(error.message);
+    revalidatePath(`/[locale]/admin/courses/[courseId]`, "page");
     return { success: true };
-  } catch (err: any) {
-    return { error: err.message };
+  } catch (error: any) {
+    return { error: error.message };
   }
 }

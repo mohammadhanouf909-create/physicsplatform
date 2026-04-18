@@ -58,7 +58,6 @@ export default function CurriculumBuilder({ course, locale }: Props) {
         setError(result.error);
       } else {
         form.reset();
-        // Optimistic: refresh will happen via revalidation but we also do a reload
         window.location.reload();
       }
     });
@@ -218,13 +217,24 @@ export default function CurriculumBuilder({ course, locale }: Props) {
                         {(lecture as any).materials?.length ?? 0} files
                       </span>
                     </button>
-                    <button
-                      onClick={() => handleDeleteLecture(lecture.id)}
-                      disabled={isPending}
-                      className="ms-2 text-xs text-red-500 hover:text-red-700 px-2 py-1"
-                    >
-                      Delete
-                    </button>
+                    
+                    {/* هنا التعديل السحري: زرار رفع الفيديو والحذف */}
+                    <div className="flex items-center gap-3 ms-2">
+                      <a 
+                        href={`/${locale}/admin/courses/${course.id}/lectures/${lecture.id}`}
+                        className="text-xs bg-blue-600 text-white hover:bg-blue-700 px-3 py-1.5 rounded-md font-medium transition-colors"
+                      >
+                        رفع فيديو 🎬
+                      </a>
+                      <button
+                        onClick={() => handleDeleteLecture(lecture.id)}
+                        disabled={isPending}
+                        className="text-xs text-red-500 hover:text-red-700 font-medium px-2 py-1"
+                      >
+                        حذف
+                      </button>
+                    </div>
+
                   </div>
 
                   {/* Materials */}

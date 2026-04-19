@@ -1,0 +1,1 @@
+﻿export default function Placeholder() { return <div className='p-10 text-center font-bold text-slate-500'>قريباً... يتم تجهيز هذه الصفحة</div>; }
